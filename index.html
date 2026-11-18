@@ -343,7 +343,7 @@ const MONTH_NOM = ['Январь','Февраль','Март','Апрель','М
 const WD = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
 const KIND = {
-  wake:   { shift: 0,   back: 300, defUntil: 510,  name: 'Проснулась вовремя', verb: 'Я проснулась',
+  wake:   { shift: 0,   back: 300, defUntil: 510,  name: 'Встала вовремя', verb: 'Я встала',
             label: 'Отметить подъём можно до', hint: 'Отметка открывается за 5 часов до этого времени. Если проснёшься позже, этот день останется без отметки.' },
   bed:    { shift: 300, back: 360, defUntil: 1440, name: 'Легла спать вовремя', verb: 'Ложусь спать',
             label: 'Отметить отбой можно до', hint: 'Отметка открывается за 6 часов до этого времени. Время после полуночи тоже подходит.' },
@@ -425,7 +425,8 @@ function normalize(id, d) {
   const untilMin = num(d.untilMin, KIND[kind].defUntil);
   const h = {
     id, kind,
-    name: (typeof d.name === 'string' && d.name.trim()) ? d.name.trim().slice(0, 60) : (KIND[kind].name || 'Огонёк'),
+    name: (kind === 'wake' && d.name === 'Проснулась вовремя') ? KIND.wake.name
+      : (typeof d.name === 'string' && d.name.trim()) ? d.name.trim().slice(0, 60) : (KIND[kind].name || 'Огонёк'),
     shiftMin: num(d.shiftMin, KIND[kind].shift),
     fromMin: num(d.fromMin, windowFor(kind, untilMin).fromMin),
     untilMin, order: num(d.order, 0), marks, restores, v: 1,
@@ -473,6 +474,16 @@ function useLocal() {
     if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) list = arr.filter(x => x && typeof x.id === 'string').map(x => normalize(x.id, x)); }
     ok = true;
   } catch (e) {}
+  // One-time cleanup she asked for: take the bedtime flame off this phone. Runs once; a bedtime flame added later stays.
+  if (ok) {
+    try {
+      if (!localStorage.getItem(LS_KEY + '-nobed')) {
+        const kept = list.filter(h => h.kind !== 'bed');
+        if (kept.length !== list.length) { list = kept; localStorage.setItem(LS_KEY, JSON.stringify(list)); }
+        localStorage.setItem(LS_KEY + '-nobed', '1');
+      }
+    } catch (e) {}
+  }
   state.habits = list.sort(byOrder);
   state.mode = ok ? 'local' : 'memory';
   renderAll();
@@ -682,7 +693,7 @@ function onboardView() {
       </div>
     </div>
     <div class="preset">
-      <input type="checkbox" id="ob-bed" checked>
+      <input type="checkbox" id="ob-bed">
       <div class="preset-body">
         <label for="ob-bed" class="preset-name">${KIND.bed.name}</label>
         <div class="preset-time"><label for="ob-bed-time">отметить можно до</label><input type="time" id="ob-bed-time" value="00:00"></div>
