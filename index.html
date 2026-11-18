@@ -453,10 +453,37 @@ async function boot() {
   slowTimer = setTimeout(() => { if (state.mode === 'db-loading') { state.note = 'slow'; renderAll(); } }, 10000);
   dbCol.onSnapshot(onSnap, onSnapErr);
 }
+// One-time cleanup she asked for: the bedtime flame goes away, and a morning time she had set on it
+// (e.g. 09:00, meant for getting up) moves to the "Встала вовремя" flame. A bedtime flame added later stays.
+const META_ID = '_meta';
+let cleanupChecked = false;
+function bedCleanup(list) {
+  const beds = list.filter(h => h.kind === 'bed');
+  const wake = list.find(h => h.kind === 'wake');
+  const morning = beds.find(b => b.untilMin >= 300 && b.untilMin < 1080);
+  const fixedWake = (wake && morning && wake.untilMin !== morning.untilMin) ? normalize(wake.id, { ...wake, ...windowFor('wake', morning.untilMin) }) : null;
+  const kept = list.filter(h => h.kind !== 'bed').map(h => (fixedWake && h.id === fixedWake.id) ? fixedWake : h);
+  return { beds, fixedWake, kept };
+}
 function onSnap(snap) {
   if (!snap.metadata.fromCache) { clearTimeout(slowTimer); if (state.note === 'slow') state.note = ''; }
-  const list = [];
-  for (const d of snap.docs) { if (!d.exists) continue; const data = d.data(); if (data) list.push(normalize(d.id, JSON.parse(JSON.stringify(data)))); }
+  let list = [], meta = null;
+  for (const d of snap.docs) {
+    if (!d.exists) continue;
+    const data = d.data(); if (!data) continue;
+    if (d.id === META_ID) { meta = data; continue; }
+    list.push(normalize(d.id, JSON.parse(JSON.stringify(data))));
+  }
+  if (!snap.metadata.fromCache && !cleanupChecked) {
+    cleanupChecked = true;
+    if (!meta || !meta.nobed) {
+      const c = bedCleanup(list);
+      c.beds.forEach(b => queueWrite(b.id, ref => ref.delete()));
+      if (c.fixedWake) queueWrite(c.fixedWake.id, ref => ref.set(bodyOf(c.fixedWake)));
+      queueWrite(META_ID, ref => ref.set({ nobed: true }));
+      list = c.kept;
+    }
+  }
   state.habits = list.sort(byOrder);
   if (state.mode === 'db-loading' && (!snap.metadata.fromCache || list.length)) state.mode = 'db';
   renderAll();
@@ -478,8 +505,8 @@ function useLocal() {
   if (ok) {
     try {
       if (!localStorage.getItem(LS_KEY + '-nobed')) {
-        const kept = list.filter(h => h.kind !== 'bed');
-        if (kept.length !== list.length) { list = kept; localStorage.setItem(LS_KEY, JSON.stringify(list)); }
+        const c = bedCleanup(list);
+        if (c.beds.length || c.fixedWake) { list = c.kept; localStorage.setItem(LS_KEY, JSON.stringify(list)); }
         localStorage.setItem(LS_KEY + '-nobed', '1');
       }
     } catch (e) {}
@@ -661,14 +688,9 @@ function rowView(h, a) {
     ${pillView(h, a)}
   </div>`;
 }
-function pickHero(list, now) {
+// The big card is always "Встала вовремя" when it exists; everything else goes in the list below.
+function pickHero(list) {
   const wake = list.find(h => h.kind === 'wake'), bed = list.find(h => h.kind === 'bed');
-  if (wake && bed) {
-    const c = now.getHours() * 60 + now.getMinutes();
-    const bedFrom = bed.fromMin % 1440, wakeFrom = wake.fromMin % 1440;
-    const evening = bedFrom > wakeFrom ? (c >= bedFrom || c < wakeFrom) : (c >= bedFrom && c < wakeFrom);
-    return (evening ? bed : wake).id;
-  }
   return (wake || bed || list[0]).id;
 }
 function rulesView() {
