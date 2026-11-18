@@ -61,6 +61,8 @@ h1 em { font-style: normal; color: var(--ember); }
 .hero-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .hero-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; margin: 0; line-height: 1.25; }
 .chip { font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chip-edit { background: rgba(255,122,47,.08); border-color: rgba(255,122,47,.45); color: var(--dawn); font-family: var(--font-body); font-weight: 600; padding: 6px 12px; flex: none; }
+.chip-edit:active { background: rgba(255,122,47,.16); }
 .hero-main { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
 .count { font-family: var(--font-display); font-weight: 800; font-size: 84px; line-height: .9; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
 .count-sub { color: var(--muted); font-size: 15px; margin-top: 8px; }
@@ -611,7 +613,7 @@ function heroView(h, a) {
   const lvlName = lvl ? lvl.name : (a.best > 0 ? 'погас' : 'ещё не зажжён');
   const [title, sub] = statusLines(h, a);
   return `<section class="hero" aria-labelledby="hero-${h.id}">
-    <div class="hero-head"><h2 class="hero-name" id="hero-${h.id}">${esc(h.name)}</h2><span class="chip">${deadlineChip(h)}</span></div>
+    <div class="hero-head"><h2 class="hero-name" id="hero-${h.id}">${esc(h.name)}</h2><button class="chip chip-edit" data-action="time-open" data-id="${h.id}" aria-label="Изменить время, сейчас ${deadlineChip(h)}">${deadlineChip(h)} <span aria-hidden="true">✎</span></button></div>
     <div class="hero-main">
       ${flameView(h, a, 124, 'hero')}
       <div><div class="count">${a.streak}</div><div class="count-sub">${dni(a.streak)} подряд</div><div class="level" style="color:${lvlColor}">${lvlName}</div></div>
@@ -718,6 +720,19 @@ function showImportSheet() {
       <button class="btn btn-fire" type="submit">Перенести огоньки</button>
     </form></div></div>`;
   const ta = $('#im-text'); if (ta) ta.focus();
+}
+function showTimeSheet(id) {
+  const h = byId(id); if (!h || !guardWrite()) return;
+  const k = KIND[h.kind];
+  const val = hasDeadline(h) ? fmtMin(h.untilMin) : '';
+  openSheet({ sheet: 'raw' });
+  $sheet.innerHTML = `<div class="backdrop" data-action="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sheet-head"><h2 id="sh-title">${esc(h.name)}</h2><button type="button" class="close" data-action="close" aria-label="Закрыть">×</button></div>
+    <form id="time-form" class="form" data-id="${h.id}" novalidate>
+      <div class="field"><label for="t-until">${k.label}</label><input id="t-until" type="time" value="${val}"><p class="hint">${k.hint}</p></div>
+      <button class="btn btn-fire" type="submit">Сохранить</button>
+    </form></div></div>`;
+  const inp = $('#t-until'); if (inp) inp.focus();
 }
 function doBackup() {
   const text = backupText();
@@ -1009,6 +1024,7 @@ document.addEventListener('click', e => {
     case 'add': openSheet({ sheet: 'add' }); break;
     case 'close': closeSheet(); break;
     case 'add-preset': doAddPreset(t.dataset.kind); break;
+    case 'time-open': showTimeSheet(id); break;
     case 'backup': doBackup(); break;
     case 'import-open': showImportSheet(); break;
     case 'fill-name': { const i = $('#a-name'); if (i) { i.value = t.dataset.name || ''; i.focus(); } break; }
@@ -1058,6 +1074,13 @@ document.addEventListener('submit', e => {
     put({ ...h, name, ...windowFor(h.kind, until) });
     $('#sh-title').textContent = name;
     toast('Сохранено');
+  } else if (f.id === 'time-form') {
+    const h = byId(f.dataset.id); if (!h) return;
+    const raw = $('#t-until').value;
+    const until = (h.kind === 'custom' && !raw) ? 1439 : timeToUntil(h.kind, raw);
+    put({ ...h, ...windowFor(h.kind, until) });
+    closeSheet();
+    toast(hasDeadline(byId(h.id)) ? `Готово, теперь отметить можно до ${fmtMin(until)}` : 'Готово, отмечать можно в любое время');
   } else if (f.id === 'import-form') {
     doImport($('#im-text').value);
   } else if (f.id === 'add-form') {
