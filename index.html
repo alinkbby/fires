@@ -63,6 +63,10 @@ h1 em { font-style: normal; color: var(--ember); }
 .chip { font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .chip-edit { background: rgba(255,122,47,.08); border-color: rgba(255,122,47,.45); color: var(--dawn); font-family: var(--font-body); font-weight: 600; padding: 6px 12px; flex: none; }
 .chip-edit:active { background: rgba(255,122,47,.16); }
+.hero-head.goal { display: grid; gap: 10px; justify-items: start; }
+.goal-time { display: inline-flex; align-items: center; gap: 10px; background: rgba(255,122,47,.10); border: 1.5px solid rgba(255,122,47,.55); color: var(--dawn); border-radius: 16px; padding: 8px 16px; font-family: var(--font-display); font-weight: 800; font-size: 28px; line-height: 1.1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.goal-time:active { background: rgba(255,122,47,.18); }
+.goal-time .pen { font-family: var(--font-body); font-size: 17px; font-weight: 600; opacity: .85; }
 .hero-main { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
 .count { font-family: var(--font-display); font-weight: 800; font-size: 84px; line-height: .9; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
 .count-sub { color: var(--muted); font-size: 15px; margin-top: 8px; }
@@ -613,7 +617,7 @@ function heroView(h, a) {
   const lvlName = lvl ? lvl.name : (a.best > 0 ? 'погас' : 'ещё не зажжён');
   const [title, sub] = statusLines(h, a);
   return `<section class="hero" aria-labelledby="hero-${h.id}">
-    <div class="hero-head"><h2 class="hero-name" id="hero-${h.id}">${esc(h.name)}</h2><button class="chip chip-edit" data-action="time-open" data-id="${h.id}" aria-label="Изменить время, сейчас ${deadlineChip(h)}">${deadlineChip(h)} <span aria-hidden="true">✎</span></button></div>
+    <div class="hero-head goal"><h2 class="hero-name" id="hero-${h.id}">${esc(h.name)}</h2><button class="goal-time" data-action="time-open" data-id="${h.id}" aria-label="Изменить время, сейчас ${deadlineChip(h)}">${deadlineChip(h)}<span class="pen" aria-hidden="true">✎</span></button></div>
     <div class="hero-main">
       ${flameView(h, a, 124, 'hero')}
       <div><div class="count">${a.streak}</div><div class="count-sub">${dni(a.streak)} подряд</div><div class="level" style="color:${lvlColor}">${lvlName}</div></div>
