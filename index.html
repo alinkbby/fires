@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#130e1b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Огоньки">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>Огоньки сна</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap">
+<style>
+:root {
+  /* Pre-dawn night world, one phone-width column: the flame that matters right now is the hero, the other flames are rows under it. */
+  --night: #130e1b;
+  --panel: #1c1426;
+  --panel-2: #261c33;
+  --line: #3a2c48;
+  --text: #f7eee6;
+  --muted: #ae9fb4;
+  --ember: #ff7a2f;
+  --dawn: #ffc27a;
+  --ice: #8cc8ff;
+  --ash: #6a5f73;
+  --danger: #ff9a9a;
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "Onest", "Segoe UI", Roboto, system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--night); color: var(--text); }
+body { font-family: var(--font-body); font-size: 16px; line-height: 1.45; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(110% 50% at 50% 112%, rgba(255,122,47,.22), rgba(255,122,47,0) 62%),
+    radial-gradient(80% 40% at 90% -10%, rgba(140,120,255,.12), rgba(140,120,255,0) 70%); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: default; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--dawn); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app { position: relative; z-index: 1; max-width: 460px; margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 22px) max(18px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 40px) max(18px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+
+/* header */
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.date { margin: 0 0 4px; color: var(--muted); font-size: 14px; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.02em; line-height: 1.05; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ember); }
+.icon-btn { width: 44px; height: 44px; flex: none; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); display: grid; place-items: center; font-size: 24px; line-height: 1; padding: 0; }
+
+/* hero */
+.hero { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.hero-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.hero-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; margin: 0; line-height: 1.25; }
+.chip { font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hero-main { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
+.count { font-family: var(--font-display); font-weight: 800; font-size: 84px; line-height: .9; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+.count-sub { color: var(--muted); font-size: 15px; margin-top: 8px; }
+.level { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 13px; font-weight: 600; }
+.level::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.status { margin: 0; font-size: 16px; font-weight: 600; text-wrap: pretty; }
+.status small { display: block; color: var(--muted); font-size: 14px; font-weight: 400; margin-top: 3px; }
+.progress { display: grid; gap: 7px; font-size: 13px; color: var(--muted); }
+.bar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--ember), var(--dawn)); border-radius: inherit; }
+
+.btn { width: 100%; min-height: 58px; border-radius: 18px; border: 0; font-family: var(--font-display); font-weight: 700; font-size: 16px; padding: 12px 16px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.btn-fire { background: linear-gradient(180deg, #ff9d4d, #ff6420); color: #2b0e00; box-shadow: 0 12px 32px -12px rgba(255,100,32,.8), inset 0 1px 0 rgba(255,255,255,.35); }
+.btn-fire:active { transform: translateY(1px); }
+.btn-ice { background: linear-gradient(180deg, #b0dcff, #6eb0f0); color: #071a2d; }
+.btn-off { background: transparent; color: var(--muted); border: 1px dashed var(--line); font-family: var(--font-body); font-weight: 500; font-size: 15px; }
+.btn-done { background: rgba(255,122,47,.10); color: var(--dawn); border: 1px solid rgba(255,122,47,.45); }
+.btn-ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); min-height: 50px; font-size: 15px; }
+.btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,154,154,.4); min-height: 50px; font-size: 15px; }
+.link { background: none; border: 0; padding: 6px 2px; color: var(--muted); font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.hero > .link { align-self: center; margin-top: -8px; }
+
+.restore { border: 1px solid rgba(140,200,255,.35); background: rgba(140,200,255,.07); border-radius: 20px; padding: 14px; display: grid; gap: 10px; }
+.restore p { margin: 0; font-size: 14px; }
+.restore b { color: var(--ice); }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
+.restores { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dots { display: inline-flex; gap: 5px; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ice); }
+.dots i.on { background: var(--ice); box-shadow: 0 0 6px rgba(140,200,255,.6); }
+
+/* flame */
+.flame { position: relative; display: grid; place-items: center; width: var(--box, 120px); height: calc(var(--box, 120px) * 1.3); flex: none; }
+.flame svg { width: calc(100% * var(--s, 1)); height: auto; overflow: visible; transform-origin: 50% 100%; filter: drop-shadow(0 0 20px var(--glow)); }
+.flame .fl { transform-origin: 50% 100%; animation: flick 2.6s ease-in-out infinite; }
+.flame .fl-in { transform-origin: 50% 100%; animation: flick2 1.7s ease-in-out infinite; }
+.flame.is-wait svg { opacity: .66; filter: saturate(.75); }
+.flame.is-wait .fl { animation-duration: 4s; }
+.flame.is-dying svg { opacity: .38; filter: grayscale(.55); }
+.flame.is-out .fl, .flame.is-out .fl-in { animation: none; }
+.flame.pop svg { animation: pop .7s cubic-bezier(.2,1.6,.4,1); }
+@keyframes flick { 0%,100% { transform: scale(1,1) skewX(0deg); } 35% { transform: scale(1.015,.975) skewX(-1.6deg); } 70% { transform: scale(.985,1.025) skewX(1.4deg); } }
+@keyframes flick2 { 0%,100% { transform: scale(1,1); } 50% { transform: scale(.94,1.06); } }
+@keyframes pop { 0% { transform: scale(.65); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
+.spark { position: absolute; left: 50%; top: 58%; width: 6px; height: 6px; border-radius: 50%; background: var(--dawn); box-shadow: 0 0 8px var(--ember); pointer-events: none; animation: spark .9s ease-out forwards; }
+@keyframes spark { from { transform: translate(-50%,-50%) scale(1); opacity: 1; } to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.2); opacity: 0; } }
+.loading .flame { animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .5; } }
+
+/* rows */
+.rows { display: flex; flex-direction: column; gap: 10px; }
+.row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 8px 12px 8px 8px; }
+.row-open { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 10px; background: none; border: 0; padding: 0; text-align: left; min-width: 0; border-radius: 16px; }
+.row-count { font-family: var(--font-display); font-weight: 800; font-size: 28px; font-variant-numeric: tabular-nums; min-width: 1.1ch; }
+.row-text { min-width: 0; display: grid; }
+.row-name { font-weight: 600; font-size: 15px; line-height: 1.25; }
+.row-status { color: var(--muted); font-size: 13px; }
+.pill { min-height: 40px; border-radius: 14px; padding: 8px 14px; border: 0; font-weight: 700; font-size: 14px; white-space: nowrap; display: inline-flex; align-items: center; }
+.pill.fire { background: linear-gradient(180deg, #ff9d4d, #ff6420); color: #2b0e00; }
+.pill.ice { background: linear-gradient(180deg, #b0dcff, #6eb0f0); color: #071a2d; }
+.pill.done { color: var(--dawn); border: 1px solid rgba(255,122,47,.45); }
+.pill.off { color: var(--muted); border: 1px dashed var(--line); font-weight: 500; }
+.add-card { width: 100%; min-height: 60px; border-radius: 22px; border: 1.5px dashed rgba(255,122,47,.45); background: rgba(255,122,47,.05); color: var(--dawn); font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; }
+.add-card b { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1; }
+.add-card:active { background: rgba(255,122,47,.12); }
+.chip-btn.idea { font-weight: 500; color: var(--muted); }
+
+/* rules + notes */
+.rules { padding: 6px 4px 0; }
+.rules h2 { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin: 0 0 10px; color: var(--dawn); }
+.rules ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.rules li { position: relative; padding-left: 18px; color: var(--muted); font-size: 14px; max-width: 65ch; }
+.rules li::before { content: ""; position: absolute; left: 2px; top: .55em; width: 7px; height: 7px; border-radius: 50%; background: var(--ember); }
+.note { font-size: 13px; color: var(--muted); text-align: center; margin: 0; }
+.backup { border-top: 1px solid var(--line); padding: 16px 4px 0; display: grid; gap: 10px; }
+.backup h2 { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin: 0; color: var(--dawn); }
+textarea { width: 100%; min-height: 160px; border-radius: 14px; border: 1px solid var(--line); background: var(--night); color: var(--text); padding: 12px 14px; font: 13px/1.4 ui-monospace, Menlo, monospace; resize: vertical; }
+
+/* onboarding */
+.onboard { gap: 14px; }
+.ob-flame { display: grid; place-items: center; padding-top: 4px; }
+.ob-title { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 700; line-height: 1.2; text-wrap: balance; }
+.ob-text { margin: 0; color: var(--muted); font-size: 15px; }
+.preset { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; background: var(--panel-2); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+.preset input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--ember); margin: 2px 0 0; }
+.preset-body { display: grid; gap: 8px; }
+.preset-name { font-weight: 700; font-size: 15px; }
+.preset-time { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.preset-time input { width: 124px; }
+
+/* forms */
+.field { display: grid; gap: 6px; }
+.field > label, .label { font-size: 13px; color: var(--muted); }
+input[type=text], input[type=time] { width: 100%; min-height: 48px; border-radius: 14px; border: 1px solid var(--line); background: var(--night); color: var(--text); padding: 10px 14px; font: inherit; font-size: 16px; }
+input[type=time] { font-variant-numeric: tabular-nums; }
+.form { display: grid; gap: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 9px 14px; font-size: 14px; font-weight: 600; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* sheet */
+.backdrop { position: fixed; inset: 0; background: rgba(6,3,10,.74); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 460px; max-height: 92%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: 28px 28px 0 0;
+  padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 26px) max(18px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: 18px; animation: up .28s ease-out; }
+@keyframes up { from { transform: translateY(28px); opacity: .5; } }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.sheet h2 { margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 700; line-height: 1.25; }
+.sub-h { margin: 4px 0 0; font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--dawn); }
+.close { width: 40px; height: 40px; flex: none; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); font-size: 22px; line-height: 1; padding: 0; }
+.live { display: flex; flex-direction: column; gap: 16px; }
+.d-top { display: flex; align-items: center; gap: 12px; }
+.d-count { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1.1; }
+.d-sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--panel-2); border-radius: 16px; padding: 10px 12px; }
+.stat b { display: block; font-family: var(--font-display); font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.cal-wrap { display: grid; gap: 10px; }
+.cal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cal-title { font-weight: 700; font-size: 15px; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav button { width: 40px; height: 36px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); font-size: 16px; padding: 0; }
+.cal-nav button:disabled { opacity: .35; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.wd { font-size: 11px; color: var(--muted); text-align: center; padding-bottom: 2px; }
+.cell { aspect-ratio: 1; border-radius: 12px; border: 0; background: var(--panel-2); color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; display: grid; place-items: center; padding: 0; }
+.cell.on { background: linear-gradient(180deg, #ffa257, #ff6a1f); color: #2b0e00; font-weight: 700; }
+.cell.rest { background: rgba(140,200,255,.12); color: var(--ice); box-shadow: inset 0 0 0 1.5px var(--ice); font-weight: 700; }
+.cell.miss { background: transparent; color: var(--ash); box-shadow: inset 0 0 0 1px var(--line); }
+.cell.future, .cell.pre { background: transparent; color: #54485f; }
+.cell.today { outline: 2px solid var(--dawn); outline-offset: 1px; }
+.cell.sel { box-shadow: inset 0 0 0 2px var(--text); }
+.cal.editing .cell:not(.tap) { opacity: .38; }
+.cal.editing .cell.tap:not(.on) { border: 1.5px dashed rgba(255,194,122,.6); color: var(--text); background: rgba(255,194,122,.05); }
+.edit-box { border: 1px solid rgba(255,122,47,.45); background: rgba(255,122,47,.07); border-radius: 20px; padding: 14px; display: grid; gap: 12px; }
+.edit-box p { margin: 0; font-size: 14px; }
+.edit-box b { color: var(--dawn); }
+
+/* last 7 days on the hero */
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%; background: none; border: 0; padding: 0; border-radius: 14px; }
+.wk { display: grid; gap: 4px; justify-items: center; }
+.wk-d { font-size: 11px; color: var(--muted); }
+.wk-c { width: 100%; max-width: 40px; aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-variant-numeric: tabular-nums; background: var(--panel-2); color: var(--muted); }
+.wk.on .wk-c { background: linear-gradient(180deg, #ffa257, #ff6a1f); color: #2b0e00; font-weight: 700; }
+.wk.rest .wk-c { background: rgba(140,200,255,.12); color: var(--ice); box-shadow: inset 0 0 0 1.5px var(--ice); font-weight: 700; }
+.wk.miss .wk-c { background: transparent; color: var(--ash); box-shadow: inset 0 0 0 1px var(--line); }
+.wk.pre .wk-c, .wk.future .wk-c { background: transparent; color: #54485f; box-shadow: inset 0 0 0 1px rgba(58,44,72,.5); }
+.wk.today .wk-c { outline: 2px solid var(--dawn); outline-offset: 1px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 4px; }
+.legend .l-on { background: linear-gradient(180deg, #ffa257, #ff6a1f); }
+.legend .l-rest { box-shadow: inset 0 0 0 1.5px var(--ice); }
+.legend .l-miss { box-shadow: inset 0 0 0 1px var(--ash); }
+.cal-info { min-height: 1.45em; font-size: 14px; margin: 0; }
+
+.toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 14px); transform: translateX(-50%); z-index: 40; background: var(--panel-2); border: 1px solid rgba(255,122,47,.55); color: var(--text); padding: 12px 18px; border-radius: 16px; font-weight: 600; font-size: 15px; box-shadow: 0 16px 40px -12px rgba(0,0,0,.7); width: max-content; max-width: calc(100% - 32px); text-align: center; animation: drop .3s ease-out; }
+.toast[hidden] { display: none; }
+@keyframes drop { from { transform: translate(-50%, -12px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<main class="app" id="app" aria-live="polite"></main>
+<div id="sheet"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script id="logic">
+const OG = (() => {
+  'use strict';
+  const MAX_RESTORES = 5;
+  const RESTORE_WINDOW = 3;
+  const pad = n => String(n).padStart(2, '0');
+  const ymdLocal = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const p = s.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); };
+  const fromUTC = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+  const addDays = (s, n) => fromUTC(parse(s) + n * 864e5);
+  const diffDays = (a, b) => Math.round((parse(a) - parse(b)) / 864e5);
+  const fmtMin = m => { m = ((m % 1440) + 1440) % 1440; return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
+  const isDay = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+  const LEVELS = [
+    { min: 0, key: 'ash', name: 'погас', gen: '' },
+    { min: 1, key: 'spark', name: 'искра', gen: 'искры' },
+    { min: 3, key: 'flame', name: 'огонёк', gen: 'огонька' },
+    { min: 7, key: 'fire', name: 'костёр', gen: 'костра' },
+    { min: 14, key: 'pink', name: 'розовое пламя', gen: 'розового пламени' },
+    { min: 30, key: 'blue', name: 'синее пламя', gen: 'синего пламени' },
+    { min: 100, key: 'sun', name: 'солнце', gen: 'солнца' },
+  ];
+  const levelFor = n => { let l = LEVELS[0]; for (const x of LEVELS) if (n >= x.min) l = x; return l; };
+  const nextLevel = n => LEVELS.find(l => l.min > n) || null;
+
+  // A habit's "day" can start later than midnight (bedtime: the night of the 18th lasts until 05:00 on the 19th).
+  function logicalNow(h, now) {
+    const shift = h.shiftMin || 0;
+    const t = new Date(now.getTime() - shift * 60000);
+    return { day: ymdLocal(t), min: t.getHours() * 60 + t.getMinutes() + shift };
+  }
+
+  function analyze(h, now) {
+    const { day: T, min } = logicalNow(h, now);
+    const marks = h.marks || {};
+    const restores = h.restores || [];
+    const restored = new Set(restores.map(r => r.day));
+    const has = d => Object.prototype.hasOwnProperty.call(marks, d) || restored.has(d);
+    const created = isDay(h.created) ? h.created : T;
+    const from = h.fromMin ?? 0;
+    const until = h.untilMin ?? 1439;
+    const doneToday = has(T);
+    let phase;
+    if (doneToday) phase = 'done';
+    else if (min < from) phase = 'soon';
+    else if (min <= until) phase = 'open';
+    else phase = 'late';
+
+    const all = [...new Set([...Object.keys(marks).filter(isDay), ...restores.map(r => r.day).filter(isDay)])].sort();
+    const first = all.length && all[0] < created ? all[0] : created;
+    const runBack = start => { let n = 0, d = start; while (has(d)) { n++; d = addDays(d, -1); } return n; };
+    const streak = doneToday ? runBack(T) : runBack(addDays(T, -1));
+
+    // The most recent run of missed days, and the run of marked days before it.
+    let gapEnd;
+    if (phase === 'late') gapEnd = T;
+    else { gapEnd = doneToday ? T : addDays(T, -1); while (has(gapEnd)) gapEnd = addDays(gapEnd, -1); }
+    const gap = [];
+    let cur = gapEnd;
+    while (gap.length <= RESTORE_WINDOW && !has(cur) && diffDays(cur, first) >= 0) { gap.push(cur); cur = addDays(cur, -1); }
+    const prevRun = has(cur) ? runBack(cur) : 0;
+    const recent = diffDays(T, gapEnd) <= RESTORE_WINDOW;
+    const canRestoreShape = prevRun > 0 && gap.length >= 1 && gap.length <= RESTORE_WINDOW && recent;
+
+    const month = T.slice(0, 7);
+    const used = restores.filter(r => typeof r.at === 'string' && r.at.slice(0, 7) === month).length;
+    const left = Math.max(0, MAX_RESTORES - used);
+    const cost = gap.length;
+    const canRestore = canRestoreShape && left >= cost;
+    const after = phase === 'late' ? 0 : streak;
+    const merged = canRestoreShape ? prevRun + cost + after : 0;
+    const lostRun = (streak === 0 && prevRun > 0 && recent) ? prevRun : 0;
+
+    let best = 0, run = 0, prev = null;
+    for (const d of all) { run = (prev && diffDays(d, prev) === 1) ? run + 1 : 1; if (run > best) best = run; prev = d; }
+
+    return { T, min, phase, doneToday, streak, gap: gap.slice().reverse(), gapEnd, prevRun, recent,
+      canRestoreShape, canRestore, cost, left, used, merged, lostRun, best, total: all.length, created, first,
+      restoreUntil: addDays(gapEnd, RESTORE_WINDOW) };
+  }
+
+  function applyRestore(h, a) {
+    return { ...h, restores: [...(h.restores || []), ...a.gap.map(d => ({ day: d, at: a.T }))] };
+  }
+
+  return { MAX_RESTORES, RESTORE_WINDOW, LEVELS, levelFor, nextLevel, logicalNow, analyze, applyRestore, addDays, diffDays, fmtMin, isDay, pad, ymdLocal };
+})();
+</script>
+
+<script>
+(() => {
+'use strict';
+const { analyze, applyRestore, levelFor, nextLevel, logicalNow, diffDays, addDays, fmtMin, isDay, pad, MAX_RESTORES } = OG;
+const $ = s => document.querySelector(s);
+const $app = $('#app');
+const $sheet = $('#sheet');
+let reduceMotion = false;
+try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+const MONTH_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const MONTH_PREP = ['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
+const MONTH_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const WD = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+const KIND = {
+  wake:   { shift: 0,   back: 300, defUntil: 510,  name: 'Проснулась вовремя', verb: 'Я проснулась',
+            label: 'Отметить подъём можно до', hint: 'Отметка открывается за 5 часов до этого времени. Если проснёшься позже, этот день останется без отметки.' },
+  bed:    { shift: 300, back: 360, defUntil: 1440, name: 'Легла спать вовремя', verb: 'Ложусь спать',
+            label: 'Отметить отбой можно до', hint: 'Отметка открывается за 6 часов до этого времени. Время после полуночи тоже подходит.' },
+  custom: { shift: 0,   back: 0,   defUntil: 1439, name: '', verb: 'Отметить',
+            label: 'Отметить можно до', hint: 'Оставь пустым, чтобы отмечать в любое время дня.' },
+};
+
+const FLAME = {
+  ash:   { o1: '#4d4356', o2: '#2c2433', i1: '#000', i2: '#000', glow: 'transparent', scale: .8 },
+  spark: { o1: '#ffb056', o2: '#ff5a1f', i1: '#fff1b8', i2: '#ffb347', glow: 'rgba(255,110,40,.40)', scale: .8 },
+  flame: { o1: '#ffc061', o2: '#ff6a00', i1: '#fff6c9', i2: '#ffc54d', glow: 'rgba(255,130,40,.50)', scale: .88 },
+  fire:  { o1: '#ff8a3d', o2: '#e3301b', i1: '#ffe07a', i2: '#ff9a2e', glow: 'rgba(255,80,30,.55)', scale: .95 },
+  pink:  { o1: '#ff7aa8', o2: '#d1206a', i1: '#ffd6b8', i2: '#ff8f7a', glow: 'rgba(255,60,130,.55)', scale: 1 },
+  blue:  { o1: '#8fb6ff', o2: '#5a35ee', i1: '#e4f3ff', i2: '#8fd0ff', glow: 'rgba(110,110,255,.60)', scale: 1.02 },
+  sun:   { o1: '#fff0a0', o2: '#ffa600', i1: '#ffffff', i2: '#fff3c4', glow: 'rgba(255,200,60,.70)', scale: 1.06 },
+};
+const OUT_PATH = 'M50 4C58 26 86 44 86 80C86 108 68 126 50 126C32 126 14 108 14 82C14 62 26 50 32 38C34 52 40 58 44 60C42 40 44 20 50 4Z';
+const IN_PATH = 'M50 56C56 70 70 80 70 98C70 112 61 120 50 120C39 120 30 112 30 99C30 88 38 82 42 74C44 82 47 86 50 87C48 76 48 66 50 56Z';
+
+const MILESTONES = {
+  3: 'Три дня подряд! Искра стала огоньком',
+  7: 'Неделя подряд! Теперь это костёр',
+  14: 'Две недели! Пламя стало розовым',
+  21: 'Три недели подряд, режим уже твой',
+  30: 'Месяц подряд! Синее пламя',
+  50: '50 дней подряд!',
+  100: 'Сто дней! Огонёк стал солнцем',
+  365: 'Целый год подряд!',
+};
+
+const IDEAS = ['Без телефона перед сном', 'Стакан воды утром', 'Зарядка утром', 'Завтрак до 9:00', 'Не дремала днём'];
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function plural(n, f) { n = Math.abs(n) % 100; const n1 = n % 10; if (n > 10 && n < 20) return f[2]; if (n1 > 1 && n1 < 5) return f[1]; if (n1 === 1) return f[0]; return f[2]; }
+const dni = n => plural(n, ['день', 'дня', 'дней']);
+const vosst = n => plural(n, ['восстановление', 'восстановления', 'восстановлений']);
+const minut = n => plural(n, ['минута', 'минуты', 'минут']);
+const fmtDay = ds => `${Number(ds.slice(8))} ${MONTH_GEN[Number(ds.slice(5, 7)) - 1]}`;
+const fmtDayRel = (ds, T) => ds === T ? 'сегодня' : (ds === addDays(T, -1) ? 'вчера' : fmtDay(ds));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const byOrder = (a, b) => (a.order - b.order) || (a.id < b.id ? -1 : 1);
+
+/* ---------- state ---------- */
+const state = { mode: 'loading', habits: [], note: '', readOnly: false, ui: { sheet: null } };
+let dbCol = null, slowTimer = null;
+const chains = {};
+const LS_KEY = 'ogonki-sna-v1';
+const byId = id => state.habits.find(h => h.id === id);
+
+function windowFor(kind, until) {
+  if (kind === 'custom') return { fromMin: 0, untilMin: until };
+  const floor = kind === 'bed' ? 300 : 0;
+  return { fromMin: Math.max(floor, until - KIND[kind].back), untilMin: until };
+}
+function timeToUntil(kind, str) {
+  if (!str || !/^\d{1,2}:\d{2}/.test(str)) return KIND[kind].defUntil;
+  const [hh, mm] = str.split(':').map(Number);
+  let v = hh * 60 + mm;
+  if (kind === 'bed' && v < 300) v += 1440;
+  if (kind === 'custom' && v === 0) v = 1439;
+  return v;
+}
+const hasDeadline = h => !(h.kind === 'custom' && h.untilMin >= 1439);
+const deadlineChip = h => hasDeadline(h) ? `до ${fmtMin(h.untilMin)}` : 'в любое время';
+
+function newHabit(kind, name, untilMin, order) {
+  const id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const h = { id, kind, name, shiftMin: KIND[kind].shift, ...windowFor(kind, untilMin), order, marks: {}, restores: [], v: 1 };
+  h.created = logicalNow(h, new Date()).day;
+  return h;
+}
+function normalize(id, d) {
+  d = d || {};
+  const kind = KIND[d.kind] ? d.kind : 'custom';
+  const num = (v, def) => (typeof v === 'number' && isFinite(v)) ? v : def;
+  const marks = {};
+  if (d.marks && typeof d.marks === 'object') for (const [k, v] of Object.entries(d.marks)) if (isDay(k)) marks[k] = typeof v === 'string' ? v.slice(0, 5) : '';
+  const restores = Array.isArray(d.restores) ? d.restores.filter(r => r && isDay(r.day) && isDay(r.at)).map(r => ({ day: r.day, at: r.at })) : [];
+  const untilMin = num(d.untilMin, KIND[kind].defUntil);
+  const h = {
+    id, kind,
+    name: (typeof d.name === 'string' && d.name.trim()) ? d.name.trim().slice(0, 60) : (KIND[kind].name || 'Огонёк'),
+    shiftMin: num(d.shiftMin, KIND[kind].shift),
+    fromMin: num(d.fromMin, windowFor(kind, untilMin).fromMin),
+    untilMin, order: num(d.order, 0), marks, restores, v: 1,
+  };
+  const days = [...Object.keys(marks), ...restores.map(r => r.day)].sort();
+  const today = logicalNow(h, new Date()).day;
+  // created = the day the flame was added; days before it can be filled in by hand from the calendar.
+  h.created = isDay(d.created) ? d.created : (days.length ? days[0] : today);
+  return h;
+}
+function bodyOf(h) { const { id, ...rest } = h; return JSON.parse(JSON.stringify(rest)); }
+
+/* ---------- storage ---------- */
+async function boot() {
+  renderAll();
+  const c = window.claude;
+  if (!c || typeof c.use !== 'function') { useLocal(); return; }
+  let db = null, user = null, uid = null;
+  try { [db, user] = await Promise.all([c.use('db'), c.use('user')]); } catch (e) {}
+  if (db && user) { try { uid = await user.id(); } catch (e) {} }
+  if (!db || !uid) { useLocal(); return; }
+  try { dbCol = db.collection('data/users/' + uid); } catch (e) { useLocal(); return; }
+  state.mode = 'db-loading';
+  slowTimer = setTimeout(() => { if (state.mode === 'db-loading') { state.note = 'slow'; renderAll(); } }, 10000);
+  dbCol.onSnapshot(onSnap, onSnapErr);
+}
+function onSnap(snap) {
+  if (!snap.metadata.fromCache) { clearTimeout(slowTimer); if (state.note === 'slow') state.note = ''; }
+  const list = [];
+  for (const d of snap.docs) { if (!d.exists) continue; const data = d.data(); if (data) list.push(normalize(d.id, JSON.parse(JSON.stringify(data)))); }
+  state.habits = list.sort(byOrder);
+  if (state.mode === 'db-loading' && (!snap.metadata.fromCache || list.length)) state.mode = 'db';
+  renderAll();
+}
+function onSnapErr() {
+  clearTimeout(slowTimer);
+  state.note = 'error';
+  if (state.mode === 'db-loading') state.mode = 'db';
+  renderAll();
+}
+function useLocal() {
+  let ok = false, list = [];
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) list = arr.filter(x => x && typeof x.id === 'string').map(x => normalize(x.id, x)); }
+    ok = true;
+  } catch (e) {}
+  state.habits = list.sort(byOrder);
+  state.mode = ok ? 'local' : 'memory';
+  renderAll();
+}
+function saveLocal() {
+  if (state.mode !== 'local') return;
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state.habits)); } catch (e) { state.mode = 'memory'; }
+}
+const inDb = () => state.mode === 'db' || state.mode === 'db-loading';
+function queueWrite(id, fn) {
+  const ref = dbCol.doc(id);
+  const run = async () => {
+    try { await fn(ref); }
+    catch (e) { if (e && e.code === 'unavailable') { await sleep(500 + Math.random() * 1000); await fn(ref); } else throw e; }
+  };
+  chains[id] = (chains[id] || Promise.resolve()).then(run).catch(onWriteError);
+}
+function onWriteError(e) {
+  const code = e && e.code;
+  if (code === 'invalid_argument' || code === 'not_granted') { state.readOnly = true; toast('Здесь можно только смотреть, отметка не сохранилась'); }
+  else if (code === 'quota_exceeded') toast('Хранилище заполнено, отметка не сохранилась');
+  else toast('Не получилось сохранить. Проверь интернет и попробуй ещё раз');
+  renderAll();
+}
+function put(h) {
+  h = normalize(h.id, h);
+  const i = state.habits.findIndex(x => x.id === h.id);
+  if (i >= 0) state.habits[i] = h; else state.habits.push(h);
+  state.habits.sort(byOrder);
+  if (inDb()) queueWrite(h.id, ref => ref.set(bodyOf(h))); else saveLocal();
+  renderAll();
+}
+function removeHabit(id) {
+  state.habits = state.habits.filter(x => x.id !== id);
+  if (inDb()) queueWrite(id, ref => ref.delete()); else saveLocal();
+  renderAll();
+}
+
+/* ---------- views ---------- */
+function flameSVG(key, gid) {
+  const c = FLAME[key];
+  const ash = key === 'ash';
+  const inner = ash ? '' : `<path class="fl-in" fill="url(#i-${gid})" d="${IN_PATH}"/>`;
+  return `<svg viewBox="0 0 100 130" aria-hidden="true" focusable="false"><defs>` +
+    `<linearGradient id="o-${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.o1}"/><stop offset="1" stop-color="${c.o2}"/></linearGradient>` +
+    `<linearGradient id="i-${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.i1}"/><stop offset="1" stop-color="${c.i2}"/></linearGradient>` +
+    `</defs><g class="fl"><path fill="url(#o-${gid})" d="${OUT_PATH}"${ash ? ' stroke="#6d6276" stroke-width="2" stroke-dasharray="5 5"' : ''}/>${inner}</g></svg>`;
+}
+function flameState(a) {
+  if (a.phase === 'done') return 'is-done';
+  if (a.streak > 0) return a.phase === 'late' ? 'is-dying' : 'is-wait';
+  return 'is-out';
+}
+function flameView(h, a, box, variant) {
+  const key = a.streak > 0 ? levelFor(a.streak).key : 'ash';
+  const c = FLAME[key];
+  return `<span class="flame ${flameState(a)}" data-flame="${h.id}" style="--box:${box}px;--s:${c.scale};--glow:${c.glow}">${flameSVG(key, h.id + '-' + variant)}</span>`;
+}
+function dots(left) {
+  let s = '';
+  for (let i = 0; i < MAX_RESTORES; i++) s += `<i class="${i < left ? 'on' : ''}"></i>`;
+  return `<span class="dots" aria-hidden="true">${s}</span>`;
+}
+function restoresLine(a) {
+  return `<span class="restores">Восстановления в ${MONTH_PREP[Number(a.T.slice(5, 7)) - 1]}: ${dots(a.left)} ${a.left} из ${MAX_RESTORES}</span>`;
+}
+
+function statusLines(h, a) {
+  const until = fmtMin(h.untilMin);
+  const dl = hasDeadline(h);
+  const nextTime = dl ? `до ${until}` : 'в любое время';
+  if (a.phase === 'done') {
+    return ['Сегодня огонёк горит', h.kind === 'bed' ? `Следующая отметка завтра вечером, ${nextTime}` : `Завтра отметка ${nextTime}`];
+  }
+  let title;
+  if (a.lostRun > 0) title = `Огонёк погас. Было ${a.lostRun} ${dni(a.lostRun)} подряд`;
+  else if (a.streak > 0) title = a.phase === 'late' ? 'Сегодня пропущено, огонёк гаснет' : (a.phase === 'soon' ? 'Огонёк горит и ждёт следующей отметки' : 'Огонёк ждёт сегодняшней отметки');
+  else if (a.best > 0) title = 'Огонёк не горит';
+  else title = 'Огонёк ещё не зажжён';
+  let sub;
+  if (a.phase === 'open') {
+    const left = h.untilMin - a.min;
+    sub = !dl ? 'Отметить можно до конца дня' : (left <= 90 ? `Осталось ${left} ${minut(left)}, отметить до ${until}` : `Отметить можно до ${until}`);
+  } else if (a.phase === 'soon') {
+    sub = `Отметка откроется в ${fmtMin(h.fromMin)}`;
+  } else if (a.canRestoreShape) {
+    sub = 'Его ещё можно вернуть';
+  } else if (a.best === 0 && a.created === a.T) {
+    sub = h.kind === 'bed' ? `Первая отметка вечером, ${nextTime}` : (h.kind === 'wake' ? `Первая отметка завтра утром, ${nextTime}` : 'Первая отметка завтра');
+  } else {
+    sub = h.kind === 'bed' ? `Следующая отметка вечером, ${nextTime}` : `Завтра новый шанс, ${nextTime}`;
+  }
+  return [title, sub];
+}
+function rowStatus(h, a) {
+  if (a.phase === 'done') return 'горит сегодня';
+  if (a.lostRun > 0) return `погас, было ${a.lostRun}`;
+  if (a.phase === 'open') return hasDeadline(h) ? `отметь до ${fmtMin(h.untilMin)}` : 'отметь сегодня';
+  if (a.phase === 'soon') return `откроется в ${fmtMin(h.fromMin)}`;
+  return a.streak > 0 ? 'сегодня пропущено, гаснет' : 'сегодня уже поздно';
+}
+function heroAction(h, a) {
+  if (a.phase === 'done') {
+    const t = h.marks[a.T];
+    let s = `<div class="btn btn-done" role="status">✓ ${t ? `Отмечено в ${esc(t)}` : 'Восстановлено'}</div>`;
+    if (t !== undefined && a.min <= h.untilMin) s += `<button class="link" data-action="undo" data-id="${h.id}">Отметила по ошибке? Отменить</button>`;
+    return s;
+  }
+  if (a.phase === 'open') return `<button class="btn btn-fire" data-action="mark" data-id="${h.id}">${KIND[h.kind].verb}</button>`;
+  if (a.phase === 'soon') return `<div class="btn btn-off">Отметка откроется в ${fmtMin(h.fromMin)}</div>`;
+  return `<div class="btn btn-off">Сегодня отметить уже нельзя</div>`;
+}
+function pillView(h, a) {
+  if (a.phase === 'done') return `<span class="pill done">✓ Горит</span>`;
+  if (a.phase === 'open') return `<button class="pill fire" data-action="mark" data-id="${h.id}">Отметить</button>`;
+  if (a.canRestore) return `<button class="pill ice" data-action="restore" data-id="${h.id}">Вернуть</button>`;
+  if (a.phase === 'soon') return `<span class="pill off">с ${fmtMin(h.fromMin)}</span>`;
+  return `<span class="pill off">Поздно</span>`;
+}
+function progressView(a) {
+  const cur = levelFor(a.streak), next = nextLevel(a.streak);
+  if (!next) return `<div class="progress"><span>Сильнее этого огня не бывает</span><div class="bar"><i style="width:100%"></i></div></div>`;
+  const need = next.min - a.streak;
+  const pct = a.streak === 0 ? 0 : Math.round(((a.streak - cur.min) / (next.min - cur.min)) * 100);
+  const text = a.streak === 0 ? 'Одна отметка, и загорится искра' : `До ${next.gen} ещё ${need} ${dni(need)}`;
+  return `<div class="progress"><span>${text}</span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${text}"><i style="width:${pct}%"></i></div></div>`;
+}
+function restoreView(h, a) {
+  if (!a.canRestoreShape) return '';
+  const days = a.gap.map(d => fmtDayRel(d, a.T)).join(', ');
+  const head = a.lostRun > 0 || a.phase === 'late' ? 'Огонёк можно спасти.' : 'Можно вернуть прошлую серию.';
+  const body = `<p><b>${head}</b> Пропущено: ${days}. После восстановления серия будет ${a.merged} ${dni(a.merged)}.</p>`;
+  if (!a.canRestore) return `<div class="restore">${body}<p class="hint">В этом месяце осталось ${a.left} ${vosst(a.left)}, а нужно ${a.cost}.</p></div>`;
+  return `<div class="restore">${body}<button class="btn btn-ice" data-action="restore" data-id="${h.id}">Восстановить огонёк</button>` +
+    `<p class="hint">Потратится ${a.cost} ${vosst(a.cost)} из ${a.left}. Успей до ${fmtDay(a.restoreUntil)} включительно.</p></div>`;
+}
+function heroView(h, a) {
+  const lvl = a.streak > 0 ? levelFor(a.streak) : null;
+  const lvlColor = lvl ? FLAME[lvl.key].o1 : 'var(--muted)';
+  const lvlName = lvl ? lvl.name : (a.best > 0 ? 'погас' : 'ещё не зажжён');
+  const [title, sub] = statusLines(h, a);
+  return `<section class="hero" aria-labelledby="hero-${h.id}">
+    <div class="hero-head"><h2 class="hero-name" id="hero-${h.id}">${esc(h.name)}</h2><span class="chip">${deadlineChip(h)}</span></div>
+    <div class="hero-main">
+      ${flameView(h, a, 124, 'hero')}
+      <div><div class="count">${a.streak}</div><div class="count-sub">${dni(a.streak)} подряд</div><div class="level" style="color:${lvlColor}">${lvlName}</div></div>
+    </div>
+    ${weekStrip(h, a)}
+    <p class="status">${title}<small>${sub}</small></p>
+    ${progressView(a)}
+    ${heroAction(h, a)}
+    ${restoreView(h, a)}
+    <div class="foot">${restoresLine(a)}<button class="link" data-action="open" data-id="${h.id}">Календарь и настройки</button></div>
+  </section>`;
+}
+function weekStrip(h, a) {
+  const restored = new Set(h.restores.map(r => r.day));
+  let s = '';
+  for (let i = 6; i >= 0; i--) {
+    const ds = addDays(a.T, -i);
+    const [y, m, d] = ds.split('-').map(Number);
+    const wd = WD[(new Date(y, m - 1, d).getDay() + 6) % 7];
+    const info = dayInfo(h, a, ds, restored);
+    s += `<span class="wk ${info.cls}${ds === a.T ? ' today' : ''}"><span class="wk-d">${wd}</span><span class="wk-c">${d}</span></span>`;
+  }
+  return `<button class="week" data-action="open" data-id="${h.id}" aria-label="Последние 7 дней. Открыть календарь">${s}</button>`;
+}
+function rowView(h, a) {
+  return `<div class="row">
+    <button class="row-open" data-action="open" data-id="${h.id}" aria-label="${esc(h.name)}: ${a.streak} ${dni(a.streak)} подряд, ${rowStatus(h, a)}. Открыть календарь">
+      ${flameView(h, a, 44, 'row')}
+      <span class="row-count">${a.streak}</span>
+      <span class="row-text"><span class="row-name">${esc(h.name)}</span><span class="row-status">${rowStatus(h, a)}</span></span>
+    </button>
+    ${pillView(h, a)}
+  </div>`;
+}
+function pickHero(list, now) {
+  const wake = list.find(h => h.kind === 'wake'), bed = list.find(h => h.kind === 'bed');
+  if (wake && bed) {
+    const c = now.getHours() * 60 + now.getMinutes();
+    const bedFrom = bed.fromMin % 1440, wakeFrom = wake.fromMin % 1440;
+    const evening = bedFrom > wakeFrom ? (c >= bedFrom || c < wakeFrom) : (c >= bedFrom && c < wakeFrom);
+    return (evening ? bed : wake).id;
+  }
+  return (wake || bed || list[0]).id;
+}
+function rulesView() {
+  return `<section class="rules" aria-labelledby="rules-h"><h2 id="rules-h">Как горят огоньки</h2><ul>
+    <li>Огонёк растёт с каждым днём подряд: искра, огонёк (3 дня), костёр (7), розовое пламя (14), синее пламя (30), солнце (100).</li>
+    <li>Отметить можно только до своего времени. Если проспала, этот день останется без отметки.</li>
+    <li>Один пропущенный день, и огонёк гаснет.</li>
+    <li>Его можно вернуть в течение 3 дней. На каждый огонёк 5 восстановлений в месяц, одно восстановление закрывает один пропущенный день.</li>
+  </ul></section>`;
+}
+function onboardView() {
+  return `<section class="hero onboard" aria-labelledby="ob-h">
+    <div class="ob-flame"><span class="flame is-done" style="--box:104px;--s:.95;--glow:${FLAME.fire.glow}">${flameSVG('fire', 'ob')}</span></div>
+    <h2 class="ob-title" id="ob-h">Огонёк за каждое утро, когда встала вовремя</h2>
+    <p class="ob-text">Отмечай подъём каждый день, и огонёк будет расти. Пропустишь день, и он погаснет. Пять восстановлений в месяц помогут его спасти.</p>
+    <div class="preset">
+      <input type="checkbox" id="ob-wake" checked>
+      <div class="preset-body">
+        <label for="ob-wake" class="preset-name">${KIND.wake.name}</label>
+        <div class="preset-time"><label for="ob-wake-time">отметить можно до</label><input type="time" id="ob-wake-time" value="08:30"></div>
+        <p class="hint">Поставь время с небольшим запасом, чтобы успеть дотянуться до телефона.</p>
+      </div>
+    </div>
+    <div class="preset">
+      <input type="checkbox" id="ob-bed" checked>
+      <div class="preset-body">
+        <label for="ob-bed" class="preset-name">${KIND.bed.name}</label>
+        <div class="preset-time"><label for="ob-bed-time">отметить можно до</label><input type="time" id="ob-bed-time" value="00:00"></div>
+        <p class="hint">Отмечай, когда ложишься. Время после полуночи тоже можно.</p>
+      </div>
+    </div>
+    <button class="btn btn-fire" data-action="start">Зажечь огоньки</button>
+    <p class="hint" style="text-align:center">Свои огоньки, с любым названием, можно добавить сразу после этого.</p>
+  </section>`;
+}
+function backupView() {
+  const hint = state.mode === 'local'
+    ? 'Отметки хранятся на этом телефоне. Иногда копируй их и сохраняй в Заметки, тогда ничего не потеряется.'
+    : 'Копия нужна, чтобы перенести огоньки со всеми отметками в другое место, например в приложение на экране «Домой».';
+  const copy = state.habits.length ? `<button type="button" class="btn btn-ghost" data-action="backup">Скопировать отметки</button>` : '';
+  return `<section class="backup" aria-labelledby="bk-h"><h2 id="bk-h">Резервная копия</h2><p class="hint">${hint}</p>
+    <div class="${copy ? 'two' : ''}">${copy}<button type="button" class="btn btn-ghost" data-action="import-open">Вставить копию</button></div></section>`;
+}
+function backupText() {
+  return JSON.stringify({ app: 'ogonki-sna', v: 1, habits: state.habits.map(h => ({ id: h.id, ...bodyOf(h) })) });
+}
+function showBackupSheet() {
+  openSheet({ sheet: 'raw' });
+  $sheet.innerHTML = `<div class="backdrop" data-action="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sheet-head"><h2 id="sh-title">Твоя копия</h2><button type="button" class="close" data-action="close" aria-label="Закрыть">×</button></div>
+    <p class="hint">Скопировать автоматически не получилось. Выдели весь текст ниже, скопируй и сохрани в Заметки.</p>
+    <textarea id="bk-text" readonly aria-label="Текст копии">${esc(backupText())}</textarea></div></div>`;
+  const ta = $('#bk-text'); if (ta) { ta.focus(); ta.select(); }
+}
+function showImportSheet() {
+  openSheet({ sheet: 'raw' });
+  $sheet.innerHTML = `<div class="backdrop" data-action="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sheet-head"><h2 id="sh-title">Вставить копию</h2><button type="button" class="close" data-action="close" aria-label="Закрыть">×</button></div>
+    <form id="import-form" class="form" novalidate>
+      <div class="field"><label for="im-text">Вставь сюда текст копии целиком</label><textarea id="im-text" autocomplete="off" spellcheck="false"></textarea>
+      <p class="hint">Огоньки из копии придут со всеми отметками. Если здесь уже есть огонёк подъёма или отбоя, его заменит огонёк из копии.</p></div>
+      <button class="btn btn-fire" type="submit">Перенести огоньки</button>
+    </form></div></div>`;
+  const ta = $('#im-text'); if (ta) ta.focus();
+}
+function doBackup() {
+  const text = backupText();
+  let p = null;
+  try { p = navigator.clipboard && navigator.clipboard.writeText(text); } catch (e) { p = null; }
+  if (!p) { showBackupSheet(); return; }
+  p.then(() => toast('Копия скопирована. Вставь её в Заметки'), () => showBackupSheet());
+}
+function doImport(text) {
+  if (!guardWrite()) return;
+  let data = null;
+  try { data = JSON.parse(String(text || '').trim()); } catch (e) { data = null; }
+  const list = Array.isArray(data) ? data : (data && Array.isArray(data.habits) ? data.habits : null);
+  const incoming = (list || []).filter(x => x && typeof x.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(x.id)).map(x => normalize(x.id, x));
+  if (!incoming.length) { toast('Не получилось прочитать копию. Вставь текст целиком'); return; }
+  for (const h of incoming) {
+    if (h.kind !== 'custom') state.habits.filter(o => o.kind === h.kind && o.id !== h.id).forEach(o => removeHabit(o.id));
+    put(h);
+  }
+  closeSheet();
+  toast(`Готово, перенесено огоньков: ${incoming.length}`);
+}
+function loadingView() {
+  const msg = state.note === 'slow' ? 'Огоньки пока не загрузились. Проверь интернет, они подтянутся сами.' : 'Разжигаю огоньки…';
+  return `<section class="hero loading" aria-busy="true"><div class="ob-flame"><span class="flame is-out" style="--box:90px;--s:.85;--glow:transparent">${flameSVG('ash', 'load')}</span></div><p class="status" style="text-align:center">${msg}</p></section>`;
+}
+function noteView() {
+  let t = '';
+  if (state.readOnly) t = 'Здесь можно только смотреть, отметки не сохраняются.';
+  else if (state.note === 'error') t = 'Связь с хранилищем прервалась. Перезагрузи страницу, чтобы отметки снова сохранялись.';
+  else if (state.mode === 'memory') t = 'Отметки не сохранятся после закрытия страницы.';
+  return t ? `<p class="note">${t}</p>` : '';
+}
+function headerView(now) {
+  let date = '';
+  try { date = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) { date = fmtDay(OG.ymdLocal(now)); }
+  date = date.charAt(0).toUpperCase() + date.slice(1);
+  const add = state.habits.length ? `<button class="icon-btn" data-action="add" aria-label="Добавить огонёк">+</button>` : '';
+  return `<header class="top"><div><p class="date">${esc(date)}</p><h1>Огоньки <em>сна</em></h1></div>${add}</header>`;
+}
+function buildMain() {
+  const now = new Date();
+  let html = headerView(now);
+  if (state.mode === 'loading' || state.mode === 'db-loading') html += loadingView();
+  else if (!state.habits.length) html += onboardView();
+  else {
+    const heroId = pickHero(state.habits, now);
+    const hero = byId(heroId);
+    html += heroView(hero, analyze(hero, now));
+    const rest = state.habits.filter(h => h.id !== heroId);
+    if (rest.length) html += `<section class="rows" aria-label="Другие огоньки">${rest.map(h => rowView(h, analyze(h, now))).join('')}</section>`;
+    html += `<button class="add-card" data-action="add"><b aria-hidden="true">+</b>Добавить свой огонёк</button>`;
+    html += rulesView();
+  }
+  if (state.mode !== 'loading' && state.mode !== 'db-loading') html += backupView();
+  return html + noteView();
+}
+let lastMain = '';
+function renderMain() {
+  const html = buildMain();
+  if (html !== lastMain) { $app.innerHTML = html; lastMain = html; }
+}
+
+/* ---------- detail sheet ---------- */
+function monthAdd(ym, n) {
+  let [y, m] = ym.split('-').map(Number);
+  m += n;
+  while (m < 1) { m += 12; y--; }
+  while (m > 12) { m -= 12; y++; }
+  return `${y}-${pad(m)}`;
+}
+function dayInfo(h, a, ds, restored) {
+  if (h.marks[ds] !== undefined) return { cls: 'on', label: h.marks[ds] ? `отмечено в ${h.marks[ds]}` : 'внесено вручную' };
+  if (restored.has(ds)) return { cls: 'rest', label: 'восстановлено' };
+  const d = diffDays(ds, a.T);
+  if (d > 0) return { cls: 'future', label: 'ещё впереди' };
+  if (d === 0 && a.phase !== 'late') return { cls: 'future', label: 'сегодня, ещё не отмечено' };
+  if (diffDays(ds, a.created) < 0) return { cls: 'pre', label: 'огонька ещё не было' };
+  return { cls: 'miss', label: 'пропущено' };
+}
+function calendarView(h, a) {
+  const u = state.ui;
+  const [y, m] = u.month.split('-').map(Number);
+  const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+  const daysIn = new Date(y, m, 0).getDate();
+  const restored = new Set(h.restores.map(r => r.day));
+  let cells = WD.map(w => `<span class="wd" aria-hidden="true">${w}</span>`).join('');
+  for (let i = 0; i < offset; i++) cells += '<span aria-hidden="true"></span>';
+  const canFill = ds => diffDays(ds, h.created) < 0 && !restored.has(ds);
+  for (let d = 1; d <= daysIn; d++) {
+    const ds = `${u.month}-${pad(d)}`;
+    const info = dayInfo(h, a, ds, restored);
+    let cls = info.cls, label = info.label;
+    if (u.edit && canFill(ds)) { cls += ' tap'; label = info.cls === 'on' ? 'внесено, нажми, чтобы снять' : 'нажми, чтобы внести'; }
+    if (ds === a.T) cls += ' today';
+    if (u.sel === ds) cls += ' sel';
+    cells += `<button type="button" class="cell ${cls}" data-action="cal-sel" data-day="${ds}" aria-label="${d} ${MONTH_GEN[m - 1]}: ${label}">${d}</button>`;
+  }
+  const maxMonth = a.T.slice(0, 7);
+  const minMonth = u.edit ? monthAdd(maxMonth, -12) : a.first.slice(0, 7);
+  let infoLine = '&nbsp;';
+  if (u.sel) {
+    const inf = dayInfo(h, a, u.sel, restored);
+    if (u.edit && !canFill(u.sel) && diffDays(u.sel, a.T) <= 0 && !restored.has(u.sel)) infoLine = `${fmtDay(u.sel)}: с ${fmtDay(h.created)} огонёк отмечается только кнопкой`;
+    else infoLine = `${fmtDay(u.sel)}: ${inf.label}`;
+  }
+  return `<div class="cal-wrap">
+    <div class="cal-head"><span class="cal-title">${MONTH_NOM[m - 1]} ${y}</span>
+      <div class="cal-nav"><button type="button" id="cal-prev" data-action="cal-prev" aria-label="Предыдущий месяц" ${u.month <= minMonth ? 'disabled' : ''}>‹</button><button type="button" id="cal-next" data-action="cal-next" aria-label="Следующий месяц" ${u.month >= maxMonth ? 'disabled' : ''}>›</button></div>
+    </div>
+    <div class="cal${u.edit ? ' editing' : ''}">${cells}</div>
+    <p class="cal-info" aria-live="polite">${infoLine}</p>
+    <div class="legend"><span><i class="l-on"></i>отмечено</span><span><i class="l-rest"></i>восстановлено</span><span><i class="l-miss"></i>пропуск</span></div>
+  </div>`;
+}
+function detailLive(h) {
+  const a = analyze(h, new Date());
+  const lvl = a.streak > 0 ? levelFor(a.streak) : null;
+  const past = h.kind === 'wake' ? 'вставала вовремя' : (h.kind === 'bed' ? 'ложилась спать вовремя' : 'всё получалось');
+  const edit = state.ui.edit
+    ? `<div class="edit-box"><p><b>Внеси прошлые дни.</b> Нажимай на дни раньше ${fmtDay(h.created)}, когда ${past}. Нажмёшь ещё раз, и отметка снимется. Прошлые месяцы листаются стрелками.</p><button type="button" class="btn btn-fire" id="edit-off" data-action="edit-off">Готово</button></div>`
+    : `<button type="button" class="btn btn-ghost" id="edit-on" data-action="edit-on">Внести прошлые дни</button>`;
+  return `<div class="d-top">${flameView(h, a, 56, 'd')}<div><div class="d-count">${a.streak} ${dni(a.streak)} подряд</div><div class="d-sub">${lvl ? lvl.name : (a.best ? 'огонёк погас' : 'ещё не зажжён')} · ${deadlineChip(h)}</div></div></div>
+    ${restoreView(h, a)}
+    <div class="stats"><div class="stat"><b>${a.streak}</b><span>сейчас</span></div><div class="stat"><b>${a.best}</b><span>лучшая серия</span></div><div class="stat"><b>${a.total}</b><span>всего дней</span></div></div>
+    ${edit}
+    ${calendarView(h, a)}
+    ${restoresLine(a)}`;
+}
+function delView() {
+  if (!state.ui.confirmDel) return `<button type="button" class="btn btn-danger" data-action="del">Удалить огонёк</button>`;
+  return `<p class="hint">Серия и все отметки этого огонька пропадут насовсем.</p><div class="two"><button type="button" class="btn btn-ghost" data-action="del-cancel">Оставить</button><button type="button" class="btn btn-danger" data-action="del-yes">Удалить</button></div>`;
+}
+function detailView(h) {
+  const k = KIND[h.kind];
+  const untilVal = hasDeadline(h) ? fmtMin(h.untilMin) : '';
+  return `<div class="backdrop" data-action="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sheet-head"><h2 id="sh-title">${esc(h.name)}</h2><button type="button" class="close" data-action="close" aria-label="Закрыть">×</button></div>
+    <div class="live" id="live"></div>
+    <form id="edit-form" class="form" data-id="${h.id}" novalidate>
+      <h3 class="sub-h">Настройки</h3>
+      <div class="field"><label for="f-name">Название</label><input id="f-name" type="text" maxlength="60" value="${esc(h.name)}" autocomplete="off"></div>
+      <div class="field"><label for="f-until">${k.label}</label><input id="f-until" type="time" value="${untilVal}"><p class="hint">${k.hint}</p></div>
+      <button class="btn btn-ghost" type="submit">Сохранить</button>
+    </form>
+    <div id="del" class="form">${delView()}</div>
+  </div></div>`;
+}
+function addView() {
+  const hasWake = state.habits.some(h => h.kind === 'wake'), hasBed = state.habits.some(h => h.kind === 'bed');
+  const presets = [
+    !hasWake && `<button type="button" class="chip-btn" data-action="add-preset" data-kind="wake">${KIND.wake.name}</button>`,
+    !hasBed && `<button type="button" class="chip-btn" data-action="add-preset" data-kind="bed">${KIND.bed.name}</button>`,
+  ].filter(Boolean).join('');
+  return `<div class="backdrop" data-action="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sheet-head"><h2 id="sh-title">Новый огонёк</h2><button type="button" class="close" data-action="close" aria-label="Закрыть">×</button></div>
+    ${presets ? `<div class="field"><span class="label">Для сна</span><div class="chips">${presets}</div></div>` : ''}
+    <form id="add-form" class="form" novalidate>
+      <div class="field"><label for="a-name">${presets ? 'Или свой огонёк' : 'Как назовём огонёк'}</label><input id="a-name" type="text" maxlength="60" placeholder="Напиши что угодно" autocomplete="off">
+        <div class="chips" aria-label="Идеи">${IDEAS.map(n => `<button type="button" class="chip-btn idea" data-action="fill-name" data-name="${esc(n)}">${esc(n)}</button>`).join('')}</div></div>
+      <div class="field"><label for="a-until">Отметить можно до</label><input id="a-until" type="time"><p class="hint">${KIND.custom.hint}</p></div>
+      <button class="btn btn-fire" type="submit">Зажечь огонёк</button>
+    </form>
+  </div></div>`;
+}
+let lastLive = '', lastFocus = null;
+function renderLive() {
+  const el = document.getElementById('live');
+  const h = byId(state.ui.id);
+  if (!el || !h) return;
+  const html = detailLive(h);
+  if (html !== lastLive) { el.innerHTML = html; lastLive = html; }
+}
+function openSheet(ui) {
+  lastFocus = document.activeElement;
+  state.ui = ui;
+  lastLive = '';
+  const h = ui.sheet === 'detail' ? byId(ui.id) : null;
+  if (ui.sheet === 'detail') $sheet.innerHTML = detailView(h);
+  else if (ui.sheet === 'add') $sheet.innerHTML = addView();
+  if (ui.sheet === 'detail') renderLive();
+  document.body.style.overflow = 'hidden';
+  const c = $sheet.querySelector('.close');
+  if (c) c.focus();
+}
+function closeSheet() {
+  state.ui = { sheet: null };
+  $sheet.innerHTML = '';
+  document.body.style.overflow = '';
+  if (lastFocus && document.contains(lastFocus)) { try { lastFocus.focus(); } catch (e) {} }
+}
+function renderAll() {
+  renderMain();
+  if (state.ui.sheet === 'detail') { if (!byId(state.ui.id)) closeSheet(); else renderLive(); }
+}
+
+/* ---------- actions ---------- */
+let toastTimer = null;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.hidden = false;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
+}
+function celebrate(id) {
+  if (reduceMotion) return;
+  document.querySelectorAll(`[data-flame="${id}"]`).forEach(el => {
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    const big = el.offsetWidth > 80;
+    for (let i = 0; i < (big ? 16 : 8); i++) {
+      const s = document.createElement('span');
+      s.className = 'spark';
+      const ang = (-90 + (Math.random() * 150 - 75)) * Math.PI / 180;
+      const dist = (big ? 55 : 25) + Math.random() * (big ? 70 : 30);
+      s.style.setProperty('--dx', (Math.cos(ang) * dist).toFixed(1) + 'px');
+      s.style.setProperty('--dy', (Math.sin(ang) * dist).toFixed(1) + 'px');
+      s.style.animationDelay = Math.round(Math.random() * 140) + 'ms';
+      el.appendChild(s);
+      setTimeout(() => s.remove(), 1200);
+    }
+  });
+}
+function guardWrite() { if (state.readOnly) { toast('Здесь можно только смотреть'); return false; } return true; }
+function doMark(id) {
+  const h = byId(id); if (!h || !guardWrite()) return;
+  const now = new Date();
+  const a = analyze(h, now);
+  if (a.phase !== 'open') { renderAll(); return; }
+  put({ ...h, marks: { ...h.marks, [a.T]: `${pad(now.getHours())}:${pad(now.getMinutes())}` } });
+  const a2 = analyze(byId(id), now);
+  celebrate(id);
+  toast(MILESTONES[a2.streak] || (a2.streak === 1 ? 'Искра загорелась!' : `Огонёк горит: ${a2.streak} ${dni(a2.streak)} подряд`));
+}
+function doRestore(id) {
+  const h = byId(id); if (!h || !guardWrite()) return;
+  const a = analyze(h, new Date());
+  if (!a.canRestore) { renderAll(); return; }
+  put(applyRestore(h, a));
+  celebrate(id);
+  toast(`Огонёк вернулся: ${a.merged} ${dni(a.merged)} подряд`);
+}
+function doUndo(id) {
+  const h = byId(id); if (!h || !guardWrite()) return;
+  const a = analyze(h, new Date());
+  if (a.phase !== 'done' || h.marks[a.T] === undefined || a.min > h.untilMin) return;
+  const marks = { ...h.marks }; delete marks[a.T];
+  put({ ...h, marks });
+  toast('Отметка отменена');
+}
+function toggleBackfill(ds) {
+  const h = byId(state.ui.id);
+  if (!h || state.readOnly || !isDay(ds)) return;
+  if (diffDays(ds, h.created) >= 0) return;
+  if (h.restores.some(r => r.day === ds)) return;
+  const marks = { ...h.marks };
+  if (marks[ds] !== undefined) delete marks[ds]; else marks[ds] = '';
+  put({ ...h, marks });
+}
+function maxOrder() { return state.habits.reduce((m, h) => Math.max(m, h.order), -1); }
+function doStart() {
+  if (!guardWrite()) return;
+  const list = [];
+  if ($('#ob-wake').checked) list.push(newHabit('wake', KIND.wake.name, timeToUntil('wake', $('#ob-wake-time').value), 0));
+  if ($('#ob-bed').checked) list.push(newHabit('bed', KIND.bed.name, timeToUntil('bed', $('#ob-bed-time').value), 1));
+  if (!list.length) { toast('Выбери хотя бы один огонёк'); return; }
+  list.forEach(put);
+  toast('Огоньки готовы. Прошлые дни можно внести в календаре');
+}
+function doAddPreset(kind) {
+  if (!guardWrite() || !KIND[kind]) return;
+  put(newHabit(kind, KIND[kind].name, KIND[kind].defUntil, maxOrder() + 1));
+  closeSheet();
+  toast('Огонёк добавлен');
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-action]');
+  if (!t) return;
+  const act = t.dataset.action, id = t.dataset.id;
+  if (act === 'backdrop') { if (e.target === t) closeSheet(); return; }
+  switch (act) {
+    case 'mark': doMark(id); break;
+    case 'restore': doRestore(id); break;
+    case 'undo': doUndo(id); break;
+    case 'start': doStart(); break;
+    case 'open': { const h = byId(id); if (h) openSheet({ sheet: 'detail', id, month: analyze(h, new Date()).T.slice(0, 7), sel: null, confirmDel: false }); break; }
+    case 'add': openSheet({ sheet: 'add' }); break;
+    case 'close': closeSheet(); break;
+    case 'add-preset': doAddPreset(t.dataset.kind); break;
+    case 'backup': doBackup(); break;
+    case 'import-open': showImportSheet(); break;
+    case 'fill-name': { const i = $('#a-name'); if (i) { i.value = t.dataset.name || ''; i.focus(); } break; }
+    case 'cal-prev': case 'cal-next':
+      state.ui.month = monthAdd(state.ui.month, act === 'cal-prev' ? -1 : 1);
+      state.ui.sel = null; renderLive();
+      { const b = document.getElementById(act); if (b && !b.disabled) b.focus(); }
+      break;
+    case 'cal-sel':
+      state.ui.sel = t.dataset.day;
+      if (state.ui.edit) toggleBackfill(state.ui.sel);
+      renderLive();
+      { const c = document.querySelector(`.cell[data-day="${state.ui.sel}"]`); if (c) c.focus(); }
+      break;
+    case 'edit-on':
+      if (!guardWrite()) break;
+      state.ui.edit = true; state.ui.sel = null; renderLive();
+      { const b = document.getElementById('edit-off'); if (b) b.focus(); }
+      break;
+    case 'edit-off': {
+      state.ui.edit = false; state.ui.sel = null;
+      const h = byId(state.ui.id);
+      if (h) {
+        const a = analyze(h, new Date());
+        if (state.ui.month < a.first.slice(0, 7)) state.ui.month = a.first.slice(0, 7);
+        renderLive();
+        toast(`Готово: ${a.streak} ${dni(a.streak)} подряд`);
+      }
+      { const b = document.getElementById('edit-on'); if (b) b.focus(); }
+      break;
+    }
+    case 'del': state.ui.confirmDel = true; $('#del').innerHTML = delView(); break;
+    case 'del-cancel': state.ui.confirmDel = false; $('#del').innerHTML = delView(); break;
+    case 'del-yes': if (guardWrite()) { const delId = state.ui.id; closeSheet(); removeHabit(delId); toast('Огонёк удалён'); } break;
+  }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (!guardWrite()) return;
+  if (f.id === 'edit-form') {
+    const h = byId(f.dataset.id); if (!h) return;
+    const name = $('#f-name').value.trim();
+    if (!name) { toast('Дай огоньку название'); return; }
+    const raw = $('#f-until').value;
+    const until = (h.kind === 'custom' && !raw) ? 1439 : timeToUntil(h.kind, raw);
+    put({ ...h, name, ...windowFor(h.kind, until) });
+    $('#sh-title').textContent = name;
+    toast('Сохранено');
+  } else if (f.id === 'import-form') {
+    doImport($('#im-text').value);
+  } else if (f.id === 'add-form') {
+    const name = $('#a-name').value.trim();
+    if (!name) { toast('Напиши, что будет значить огонёк'); $('#a-name').focus(); return; }
+    const raw = $('#a-until').value;
+    put(newHabit('custom', name, raw ? timeToUntil('custom', raw) : 1439, maxOrder() + 1));
+    closeSheet();
+    toast('Огонёк добавлен, первая отметка ждёт');
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.ui.sheet) closeSheet(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') renderAll(); });
+setInterval(() => { if (document.visibilityState !== 'hidden') renderAll(); }, 20000);
+
+// Offline support only where the page is hosted as its own site (GitHub Pages), never inside Claude.
+try {
+  const ownSite = /\.github\.io$/.test(location.hostname) || location.hostname === 'localhost';
+  if (ownSite && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+} catch (e) {}
+
+boot();
+})();
+</script>
+</body>
+</html>
