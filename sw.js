@@ -1,5 +1,7 @@
-// Огоньки сна: works offline. Serves the cached copy first and refreshes it in the background.
-const CACHE = 'ogonki-v7';
+// Огоньки сна: works offline.
+// The page itself is fetched fresh first (so updates show up right away) and falls back to the saved copy offline.
+// Icons and fonts are served from the saved copy and refreshed in the background.
+const CACHE = 'ogonki-v8';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', event => {
@@ -14,12 +16,29 @@ self.addEventListener('activate', event => {
   );
 });
 
+function timeout(ms) { return new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)); }
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== self.location.origin && !isFont) return;
+
+  const isPage = req.mode === 'navigate' || (url.origin === self.location.origin && /\/(index\.html)?$/.test(url.pathname));
+  if (isPage) {
+    event.respondWith(caches.open(CACHE).then(async cache => {
+      try {
+        const res = await Promise.race([fetch(req, { cache: 'no-store' }), timeout(4000)]);
+        if (res && res.ok) cache.put('./index.html', res.clone());
+        return res;
+      } catch (e) {
+        return (await cache.match('./index.html')) || (await cache.match('./')) || Response.error();
+      }
+    }));
+    return;
+  }
+
   event.respondWith(caches.open(CACHE).then(async cache => {
     const cached = await cache.match(req, { ignoreSearch: url.origin === self.location.origin });
     const network = fetch(req)

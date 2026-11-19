@@ -1154,7 +1154,17 @@ setInterval(() => { if (document.visibilityState !== 'hidden') renderAll(); }, 2
 // Offline support only where the page is hosted as its own site (GitHub Pages), never inside Claude.
 try {
   const ownSite = /\.github\.io$/.test(location.hostname) || location.hostname === 'localhost';
-  if (ownSite && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (ownSite && 'serviceWorker' in navigator) {
+    // When a new version of the app has been installed, reload once so it shows up without reopening.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded || state.ui.sheet) return;
+      reloaded = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => { try { r.update(); } catch (e) {} }).catch(() => {});
+  }
 } catch (e) {}
 
 boot();
