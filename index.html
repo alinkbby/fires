@@ -343,10 +343,13 @@ const MONTH_NOM = ['Январь','Февраль','Март','Апрель','М
 const WD = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
 const KIND = {
-  wake:   { shift: 0,   back: 300, defUntil: 510,  name: 'Встала вовремя', verb: 'Я встала',
-            label: 'Отметить подъём можно до', hint: 'Отметка открывается за 5 часов до этого времени. Если проснёшься позже, этот день останется без отметки.' },
-  bed:    { shift: 300, back: 360, defUntil: 1440, name: 'Легла спать вовремя', verb: 'Ложусь спать',
-            label: 'Отметить отбой можно до', hint: 'Отметка открывается за 6 часов до этого времени. Время после полуночи тоже подходит.' },
+  // targetMin = the goal shown big on the card; untilMin = the last moment the day can still be marked.
+  wake:   { shift: 0,   back: 300, defTarget: 480,  defUntil: 540,  name: 'Встала вовремя', verb: 'Я встала',
+            targetLabel: 'Цель: встать до', targetHint: 'Это время крупно показано на карточке огонька.',
+            label: 'Отметить подъём можно до', hint: 'Запас, чтобы успеть нажать «Я встала». Позже этого времени отметка в этот день не откроется.' },
+  bed:    { shift: 300, back: 360, defTarget: 1440, defUntil: 1500, name: 'Легла спать вовремя', verb: 'Ложусь спать',
+            targetLabel: 'Цель: лечь до', targetHint: 'Это время крупно показано на карточке огонька.',
+            label: 'Отметить отбой можно до', hint: 'Позже этого времени отметка в этот день не откроется. Время после полуночи тоже подходит.' },
   custom: { shift: 0,   back: 0,   defUntil: 1439, name: '', verb: 'Отметить',
             label: 'Отметить можно до', hint: 'Оставь пустым, чтобы отмечать в любое время дня.' },
 };
@@ -393,10 +396,11 @@ const chains = {};
 const LS_KEY = 'ogonki-sna-v1';
 const byId = id => state.habits.find(h => h.id === id);
 
-function windowFor(kind, until) {
+function windowFor(kind, until, target) {
   if (kind === 'custom') return { fromMin: 0, untilMin: until };
   const floor = kind === 'bed' ? 300 : 0;
-  return { fromMin: Math.max(floor, until - KIND[kind].back), untilMin: until };
+  const goal = typeof target === 'number' ? Math.min(target, until) : until;
+  return { fromMin: Math.max(floor, goal - KIND[kind].back), untilMin: until };
 }
 function timeToUntil(kind, str) {
   if (!str || !/^\d{1,2}:\d{2}/.test(str)) return KIND[kind].defUntil;
@@ -407,11 +411,13 @@ function timeToUntil(kind, str) {
   return v;
 }
 const hasDeadline = h => !(h.kind === 'custom' && h.untilMin >= 1439);
-const deadlineChip = h => hasDeadline(h) ? `до ${fmtMin(h.untilMin)}` : 'в любое время';
+const deadlineChip = h => h.kind !== 'custom' ? `до ${fmtMin(h.targetMin ?? h.untilMin)}` : (hasDeadline(h) ? `до ${fmtMin(h.untilMin)}` : 'в любое время');
 
-function newHabit(kind, name, untilMin, order) {
+function newHabit(kind, name, untilMin, order, targetMin) {
   const id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const h = { id, kind, name, shiftMin: KIND[kind].shift, ...windowFor(kind, untilMin), order, marks: {}, restores: [], v: 1 };
+  const target = kind === 'custom' ? undefined : Math.min(typeof targetMin === 'number' ? targetMin : untilMin, untilMin);
+  const h = { id, kind, name, shiftMin: KIND[kind].shift, ...windowFor(kind, untilMin, target), order, marks: {}, restores: [], v: 1 };
+  if (kind !== 'custom') h.targetMin = target;
   h.created = logicalNow(h, new Date()).day;
   return h;
 }
@@ -428,9 +434,11 @@ function normalize(id, d) {
     name: (kind === 'wake' && d.name === 'Проснулась вовремя') ? KIND.wake.name
       : (typeof d.name === 'string' && d.name.trim()) ? d.name.trim().slice(0, 60) : (KIND[kind].name || 'Огонёк'),
     shiftMin: num(d.shiftMin, KIND[kind].shift),
-    fromMin: num(d.fromMin, windowFor(kind, untilMin).fromMin),
+    fromMin: num(d.fromMin, windowFor(kind, untilMin, d.targetMin).fromMin),
     untilMin, order: num(d.order, 0), marks, restores, v: 1,
   };
+  // Flames saved before the goal setting existed: the goal starts equal to the marking time.
+  if (kind !== 'custom') h.targetMin = Math.min(num(d.targetMin, untilMin), untilMin);
   const days = [...Object.keys(marks), ...restores.map(r => r.day)].sort();
   const today = logicalNow(h, new Date()).day;
   // created = the day the flame was added; days before it can be filled in by hand from the calendar.
@@ -461,7 +469,7 @@ function bedCleanup(list) {
   const beds = list.filter(h => h.kind === 'bed');
   const wake = list.find(h => h.kind === 'wake');
   const morning = beds.find(b => b.untilMin >= 300 && b.untilMin < 1080);
-  const fixedWake = (wake && morning && wake.untilMin !== morning.untilMin) ? normalize(wake.id, { ...wake, ...windowFor('wake', morning.untilMin) }) : null;
+  const fixedWake = (wake && morning && wake.untilMin !== morning.untilMin) ? normalize(wake.id, { ...wake, targetMin: morning.untilMin, ...windowFor('wake', morning.untilMin, morning.untilMin) }) : null;
   const kept = list.filter(h => h.kind !== 'bed').map(h => (fixedWake && h.id === fixedWake.id) ? fixedWake : h);
   return { beds, fixedWake, kept };
 }
@@ -696,7 +704,7 @@ function pickHero(list) {
 function rulesView() {
   return `<section class="rules" aria-labelledby="rules-h"><h2 id="rules-h">Как горят огоньки</h2><ul>
     <li>Огонёк растёт с каждым днём подряд: искра, огонёк (3 дня), костёр (7), розовое пламя (14), синее пламя (30), солнце (100).</li>
-    <li>Отметить можно только до своего времени. Если проспала, этот день останется без отметки.</li>
+    <li>На карточке крупно показана твоя цель. Отметить можно до времени отметки из настроек. Если проспала, этот день останется без отметки.</li>
     <li>Один пропущенный день, и огонёк гаснет.</li>
     <li>Его можно вернуть в течение 3 дней. На каждый огонёк 5 восстановлений в месяц, одно восстановление закрывает один пропущенный день.</li>
   </ul></section>`;
@@ -710,15 +718,17 @@ function onboardView() {
       <input type="checkbox" id="ob-wake" checked>
       <div class="preset-body">
         <label for="ob-wake" class="preset-name">${KIND.wake.name}</label>
-        <div class="preset-time"><label for="ob-wake-time">отметить можно до</label><input type="time" id="ob-wake-time" value="08:30"></div>
-        <p class="hint">Поставь время с небольшим запасом, чтобы успеть дотянуться до телефона.</p>
+        <div class="preset-time"><label for="ob-wake-target">встать до</label><input type="time" id="ob-wake-target" value="08:00"></div>
+        <div class="preset-time"><label for="ob-wake-time">отметить можно до</label><input type="time" id="ob-wake-time" value="09:00"></div>
+        <p class="hint">Цель будет крупно на карточке. Время отметки нужно с запасом, чтобы успеть нажать «Я встала».</p>
       </div>
     </div>
     <div class="preset">
       <input type="checkbox" id="ob-bed">
       <div class="preset-body">
         <label for="ob-bed" class="preset-name">${KIND.bed.name}</label>
-        <div class="preset-time"><label for="ob-bed-time">отметить можно до</label><input type="time" id="ob-bed-time" value="00:00"></div>
+        <div class="preset-time"><label for="ob-bed-target">лечь до</label><input type="time" id="ob-bed-target" value="00:00"></div>
+        <div class="preset-time"><label for="ob-bed-time">отметить можно до</label><input type="time" id="ob-bed-time" value="01:00"></div>
         <p class="hint">Отмечай, когда ложишься. Время после полуночи тоже можно.</p>
       </div>
     </div>
@@ -890,7 +900,7 @@ function detailLive(h) {
   const edit = state.ui.edit
     ? `<div class="edit-box"><p><b>Внеси прошлые дни.</b> Нажимай на дни раньше ${fmtDay(h.created)}, когда ${past}. Нажмёшь ещё раз, и отметка снимется. Прошлые месяцы листаются стрелками.</p><button type="button" class="btn btn-fire" id="edit-off" data-action="edit-off">Готово</button></div>`
     : `<button type="button" class="btn btn-ghost" id="edit-on" data-action="edit-on">Внести прошлые дни</button>`;
-  return `<div class="d-top">${flameView(h, a, 56, 'd')}<div><div class="d-count">${a.streak} ${dni(a.streak)} подряд</div><div class="d-sub">${lvl ? lvl.name : (a.best ? 'огонёк погас' : 'ещё не зажжён')} · ${deadlineChip(h)}</div></div></div>
+  return `<div class="d-top">${flameView(h, a, 56, 'd')}<div><div class="d-count">${a.streak} ${dni(a.streak)} подряд</div><div class="d-sub">${lvl ? lvl.name : (a.best ? 'огонёк погас' : 'ещё не зажжён')} · ${h.kind !== 'custom' ? `цель ${deadlineChip(h)}, отметить до ${fmtMin(h.untilMin)}` : deadlineChip(h)}</div></div></div>
     ${restoreView(h, a)}
     <div class="stats"><div class="stat"><b>${a.streak}</b><span>сейчас</span></div><div class="stat"><b>${a.best}</b><span>лучшая серия</span></div><div class="stat"><b>${a.total}</b><span>всего дней</span></div></div>
     ${edit}
@@ -910,6 +920,7 @@ function detailView(h) {
     <form id="edit-form" class="form" data-id="${h.id}" novalidate>
       <h3 class="sub-h">Настройки</h3>
       <div class="field"><label for="f-name">Название</label><input id="f-name" type="text" maxlength="60" value="${esc(h.name)}" autocomplete="off"></div>
+      ${h.kind !== 'custom' ? `<div class="field"><label for="f-target">${k.targetLabel}</label><input id="f-target" type="time" value="${fmtMin(h.targetMin ?? h.untilMin)}"><p class="hint">${k.targetHint}</p></div>` : ''}
       <div class="field"><label for="f-until">${k.label}</label><input id="f-until" type="time" value="${untilVal}"><p class="hint">${k.hint}</p></div>
       <button class="btn btn-ghost" type="submit">Сохранить</button>
     </form>
@@ -1032,15 +1043,19 @@ function maxOrder() { return state.habits.reduce((m, h) => Math.max(m, h.order),
 function doStart() {
   if (!guardWrite()) return;
   const list = [];
-  if ($('#ob-wake').checked) list.push(newHabit('wake', KIND.wake.name, timeToUntil('wake', $('#ob-wake-time').value), 0));
-  if ($('#ob-bed').checked) list.push(newHabit('bed', KIND.bed.name, timeToUntil('bed', $('#ob-bed-time').value), 1));
+  for (const [kind, order] of [['wake', 0], ['bed', 1]]) {
+    if (!$(`#ob-${kind}`).checked) continue;
+    const target = timeToUntil(kind, $(`#ob-${kind}-target`).value);
+    const until = Math.max(target, timeToUntil(kind, $(`#ob-${kind}-time`).value));
+    list.push(newHabit(kind, KIND[kind].name, until, order, target));
+  }
   if (!list.length) { toast('Выбери хотя бы один огонёк'); return; }
   list.forEach(put);
   toast('Огоньки готовы. Прошлые дни можно внести в календаре');
 }
 function doAddPreset(kind) {
   if (!guardWrite() || !KIND[kind]) return;
-  put(newHabit(kind, KIND[kind].name, KIND[kind].defUntil, maxOrder() + 1));
+  put(newHabit(kind, KIND[kind].name, KIND[kind].defUntil, maxOrder() + 1, KIND[kind].defTarget));
   closeSheet();
   toast('Огонёк добавлен');
 }
@@ -1106,14 +1121,19 @@ document.addEventListener('submit', e => {
     if (!name) { toast('Дай огоньку название'); return; }
     const raw = $('#f-until').value;
     const until = (h.kind === 'custom' && !raw) ? 1439 : timeToUntil(h.kind, raw);
-    put({ ...h, name, ...windowFor(h.kind, until) });
+    if (h.kind === 'custom') put({ ...h, name, ...windowFor(h.kind, until) });
+    else {
+      const target = timeToUntil(h.kind, $('#f-target').value);
+      if (until < target) { toast('Время отметки не может быть раньше цели'); return; }
+      put({ ...h, name, targetMin: target, ...windowFor(h.kind, until, target) });
+    }
     $('#sh-title').textContent = name;
     toast('Сохранено');
   } else if (f.id === 'time-form') {
     const h = byId(f.dataset.id); if (!h) return;
     const raw = $('#t-until').value;
     const until = (h.kind === 'custom' && !raw) ? 1439 : timeToUntil(h.kind, raw);
-    put({ ...h, ...windowFor(h.kind, until) });
+    put({ ...h, ...windowFor(h.kind, until, h.targetMin) });
     closeSheet();
     toast(hasDeadline(byId(h.id)) ? `Готово, теперь отметить можно до ${fmtMin(until)}` : 'Готово, отмечать можно в любое время');
   } else if (f.id === 'import-form') {
